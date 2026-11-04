@@ -1,0 +1,23 @@
+services:
+  emby-prune:
+    image: ghcr.io/jwklijnsma/emby-prune:latest
+    build: .
+    container_name: emby-prune
+    restart: unless-stopped
+    ports:
+      - "8585:8585"
+    volumes:
+      - ./config:/config
+    environment:
+      TZ: Europe/Amsterdam
+      # Optional: protect the web GUI with basic auth (recommended)
+      WEB_USERNAME: admin
+      WEB_PASSWORD: change-me
+      # Optional first-run seeds — everything can be changed in the GUI afterwards
+      # EMBY_URL: http://192.168.1.10:8096/emby
+      # EMBY_API_KEY: your-api-key
+      # MOVIE_PRUNE_DAYS: "120"
+      # MOVIE_NEVER_PLAYED_DAYS: "120"
+      # TV_PRUNE_DAYS: "90"
+      # TV_NEVER_PLAYED_DAYS: "180"
+      # DRY_RUN: "true"

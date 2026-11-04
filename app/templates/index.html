@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emby Prune</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2352b54b'/><path d='M9 11h14M13 11V8h6v3M11 11l1 14h8l1-14' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#101214;--panel:#181b1e;--panel2:#1f2327;--line:#2a2f34;--text:#e6e8ea;--muted:#8d959c;
+  --accent:#52b54b;--accent2:#3f8f39;--danger:#e2554f;--warn:#e0a63a;--info:#4b9fd5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:18px;padding:0 24px;height:58px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;letter-spacing:.2px}
+.brand svg{width:26px;height:26px}
+nav{display:flex;gap:2px;margin-left:12px;overflow-x:auto}
+nav button{background:none;border:0;color:var(--muted);padding:8px 14px;border-radius:7px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--text);background:var(--panel2)}
+nav button.on{color:var(--text);background:var(--panel2);box-shadow:inset 0 -2px 0 var(--accent)}
+.pill{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:99px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.pill.run{background:rgba(82,181,75,.15);color:var(--accent)}
+main{max-width:1280px;margin:0 auto;padding:24px}
+section{display:none}section.on{display:block}
+h2{font-size:18px;margin:0 0 16px;font-weight:620}
+h3{font-size:14px;margin:0 0 12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.stat .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.stat .v{font-size:22px;font-weight:650;margin-top:4px}
+.stat .s{color:var(--muted);font-size:12px;margin-top:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 14px;border-radius:7px;font:inherit;cursor:pointer;font-weight:550}
+.btn:hover{border-color:#3a4148}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#08140a}
+.btn.primary:hover{background:#5fc457}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:rgba(226,85,79,.12)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.log{background:#0b0d0e;border:1px solid var(--line);border-radius:8px;padding:12px;font:12px/1.55 var(--mono);height:380px;overflow:auto;white-space:pre-wrap;color:#c8cdd1}
+.log .stale{color:var(--warn)}.log .del{color:var(--accent)}.log .err{color:var(--danger)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;z-index:1;background:var(--panel);cursor:pointer;user-select:none}
+tbody tr:hover{background:var(--panel2)}
+td.t{font-weight:560}.p{font-weight:400;color:var(--muted);font:11px var(--mono);word-break:break-all}
+.tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:calc(100vh - 190px)}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.b-deleted{background:rgba(82,181,75,.15);color:var(--accent)}
+.b-failed{background:rgba(226,85,79,.15);color:var(--danger)}
+.b-skipped,.b-gone{background:rgba(224,166,58,.14);color:var(--warn)}
+.b-dry{background:rgba(75,159,213,.15);color:var(--info)}
+.b-live{background:rgba(226,85,79,.15);color:var(--danger)}
+.b-ok{background:rgba(82,181,75,.15);color:var(--accent)}
+.b-error{background:rgba(226,85,79,.15);color:var(--danger)}
+input[type=text],input[type=password],input[type=number],input[type=url],select{background:#0f1113;border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:7px;font:inherit;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=number]{width:110px}
+label.f{display:block;margin-bottom:14px}
+label.f>span{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+.help{font-size:12px;color:var(--muted);margin-top:4px}
+.sw{display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer}
+.sw input{appearance:none;width:36px;height:20px;border-radius:99px;background:#33393f;position:relative;cursor:pointer;flex:none;transition:.15s}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+.sw input:checked{background:var(--accent)}.sw input:checked::after{left:18px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.rule{display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center;margin-bottom:10px}
+.rule span{color:var(--muted)}
+.libs label{display:flex;gap:9px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.libs label:last-child{border:0}
+.libs input{accent-color:var(--accent);width:16px;height:16px}
+.banner{padding:11px 14px;border-radius:8px;margin-bottom:16px;border:1px solid}
+.banner.warn{background:rgba(224,166,58,.08);border-color:rgba(224,166,58,.35);color:#f0c674}
+.banner.ok{background:rgba(82,181,75,.08);border-color:rgba(82,181,75,.35);color:#8fd889}
+.banner.err{background:rgba(226,85,79,.08);border-color:rgba(226,85,79,.35);color:#f19a95}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input[type=text]{max-width:280px}.toolbar select{width:auto}
+.spacer{flex:1}
+.muted{color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+input[type=checkbox].sel{accent-color:var(--accent);width:16px;height:16px}
+#toast{position:fixed;bottom:22px;right:22px;background:var(--panel2);border:1px solid var(--line);padding:11px 16px;border-radius:8px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;max-width:380px;z-index:20}
+#toast.show{opacity:1;transform:none}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:460px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.link{color:var(--info);cursor:pointer;text-decoration:none}
+@media (max-width:700px){header{padding:0 12px;gap:8px}.brand span{display:none}main{padding:16px}.pill{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#52b54b"/><path d="M9 11h14M13 11V8h6v3M11 11l1 14h8l1-14" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Emby Prune</span>
+  </div>
+  <nav>
+    <button data-tab="dash" class="on">Dashboard</button>
+    <button data-tab="review">Review</button>
+    <button data-tab="history">History</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+  <div id="pill" class="pill">Idle</div>
+</header>
+
+<main>
+<!-- ============================== DASHBOARD -->
+<section id="dash" class="on">
+  <div id="setupBanner" class="banner warn" style="display:none">Emby isn't configured yet — add your server URL and API key under <a class="link" onclick="tab('settings')">Settings</a>.</div>
+  <div class="grid">
+    <div class="card stat"><div class="k">Mode</div><div class="v" id="sMode">–</div><div class="s" id="sModeS"></div></div>
+    <div class="card stat"><div class="k">Next scheduled run</div><div class="v" id="sNext">–</div><div class="s" id="sNextS"></div></div>
+    <div class="card stat"><div class="k">Last run</div><div class="v" id="sLast">–</div><div class="s" id="sLastS"></div></div>
+    <div class="card stat"><div class="k">Stale / reclaimable</div><div class="v" id="sStale">–</div><div class="s" id="sStaleS"></div></div>
+  </div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="row">
+      <button class="btn primary" id="bDry" onclick="startRun('dry')">Dry run (preview)</button>
+      <button class="btn danger" id="bLive" onclick="confirmLive()">Run &amp; delete</button>
+      <button class="btn" id="bCancel" onclick="cancelRun()" disabled>Cancel</button>
+      <span class="spacer"></span>
+      <span class="muted" id="ruleSummary"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><h3 style="margin:0">Live log</h3><span class="spacer"></span><label class="sw" style="margin:0"><input type="checkbox" id="follow" checked><span class="muted">Follow</span></label></div>
+    <div class="log" id="log">No run yet.</div>
+  </div>
+</section>
+
+<!-- ============================== REVIEW -->
+<section id="review">
+  <div class="row" style="margin-bottom:14px"><h2 style="margin:0" id="revTitle">Review</h2><span class="spacer"></span><span class="muted" id="revMeta"></span></div>
+  <div class="toolbar">
+    <input type="text" id="fText" placeholder="Filter title, path, library…">
+    <select id="fType"><option value="">All types</option><option>Movie</option><option>Episode</option></select>
+    <select id="fAction"><option value="">All states</option><option value="open">Not deleted</option><option value="deleted">Deleted</option><option value="skipped">Skipped</option><option value="failed">Failed</option></select>
+    <span class="spacer"></span>
+    <span class="muted" id="selInfo"></span>
+    <button class="btn" onclick="protectSel(false)">Protect item</button>
+    <button class="btn" onclick="protectSel(true)" title="Protect the whole series for episodes">Protect series</button>
+    <button class="btn danger" onclick="deleteSel()">Delete selected</button>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th style="width:34px"><input type="checkbox" class="sel" id="selAll"></th>
+        <th data-k="label">Title</th><th data-k="type">Type</th><th data-k="library">Library</th>
+        <th data-k="last_played">Last watched</th><th data-k="created">Added</th>
+        <th data-k="plays">Plays</th><th data-k="size">Size</th><th data-k="action">State</th>
+      </tr></thead>
+      <tbody id="revBody"></tbody>
+    </table>
+    <div class="empty" id="revEmpty">Run a dry run to see what would be removed.</div>
+  </div>
+</section>
+
+<!-- ============================== HISTORY -->
+<section id="history">
+  <h2>Run history</h2>
+  <div class="tablewrap">
+    <table><thead><tr><th>#</th><th>Started</th><th>Trigger</th><th>Mode</th><th>Status</th><th>Stale</th><th>Deleted</th><th>Freed</th><th></th></tr></thead>
+    <tbody id="histBody"></tbody></table>
+    <div class="empty" id="histEmpty">No runs yet.</div>
+  </div>
+</section>
+
+<!-- ============================== SETTINGS -->
+<section id="settings">
+  <div class="row" style="margin-bottom:16px"><h2 style="margin:0">Settings</h2><span class="spacer"></span><button class="btn primary" onclick="saveSettings()">Save settings</button></div>
+  <div id="setMsg"></div>
+  <div class="cols">
+    <div class="card">
+      <h3>Emby connection</h3>
+      <label class="f"><span>Server URL</span><input type="url" id="emby_url" placeholder="http://192.168.1.10:8096/emby"></label>
+      <label class="f"><span>API key</span><input type="password" id="api_key" placeholder="Dashboard → Advanced → API Keys" autocomplete="off"></label>
+      <div class="row"><button class="btn" onclick="testConn()">Test connection</button><span id="testRes" class="muted"></span></div>
+    </div>
+
+    <div class="card">
+      <h3>Retention rules</h3>
+      <label class="sw"><input type="checkbox" id="movies_enabled"><b>Prune movies</b></label>
+      <div class="rule"><span>Delete when nobody watched it in</span><span><input type="number" id="movie_days" min="0"> days</span></div>
+      <div class="rule"><span>Never watched: delete when added more than</span><span><input type="number" id="movie_never_played_days" min="0"> days ago</span></div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <label class="sw"><input type="checkbox" id="tv_enabled"><b>Prune TV episodes</b></label>
+      <div class="rule"><span>Delete when nobody watched it in</span><span><input type="number" id="tv_days" min="0"> days</span></div>
+      <div class="rule"><span>Never watched: delete when added more than</span><span><input type="number" id="tv_never_played_days" min="0"> days ago</span></div>
+      <div class="help">"Watched" means by <b>any</b> user. Set a value to 0 to switch that rule off.</div>
+    </div>
+
+    <div class="card">
+      <h3>Safety</h3>
+      <label class="sw"><input type="checkbox" id="dry_run"><span><b>Dry-run scheduled runs</b><br><span class="muted">Scheduled runs only report; untick to let them delete.</span></span></label>
+      <label class="sw"><input type="checkbox" id="protect_favorites"><span><b>Never delete favourites</b><br><span class="muted">Favourited by any user (item or its series).</span></span></label>
+      <label class="f"><span>Keep tag</span><input type="text" id="keep_tag" placeholder="keep"><div class="help">Items or series with this Emby tag are never deleted. Leave empty to disable.</div></label>
+      <label class="f"><span>Max deletions per run</span><input type="number" id="max_deletes" min="0"><div class="help">Safety cap; 0 = unlimited. Leftovers are handled next run.</div></label>
+    </div>
+
+    <div class="card">
+      <h3>Libraries</h3>
+      <div class="help" style="margin-bottom:8px">Ticked libraries are scanned; untick to exclude.</div>
+      <div class="libs" id="libs"><span class="muted">Configure and test the connection to load libraries.</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Schedule</h3>
+      <label class="sw"><input type="checkbox" id="schedule_enabled"><b>Run automatically</b></label>
+      <label class="f"><span>Preset</span>
+        <select id="cronPreset" onchange="if(this.value) $('#schedule_cron').value=this.value">
+          <option value="">Custom…</option>
+          <option value="0 3 * * *">Daily at 03:00</option>
+          <option value="0 3 * * 1">Weekly, Monday 03:00</option>
+          <option value="0 3 * * 0">Weekly, Sunday 03:00</option>
+          <option value="0 3 1 * *">Monthly, 1st at 03:00</option>
+          <option value="0 */6 * * *">Every 6 hours</option>
+        </select></label>
+      <label class="f"><span>Cron expression</span><input type="text" id="schedule_cron" placeholder="0 3 * * 1"><div class="help">min hour day month weekday — container time zone.</div></label>
+    </div>
+
+    <div class="card">
+      <h3>Notifications</h3>
+      <label class="f"><span>Webhook URL</span><input type="url" id="webhook_url" placeholder="Discord / Slack / ntfy / generic JSON"></label>
+      <label class="sw"><input type="checkbox" id="notify_dry_runs"><b>Also notify for dry runs</b></label>
+    </div>
+
+    <div class="card" style="grid-column:1/-1">
+      <h3>Protected items</h3>
+      <div id="protList" class="muted">None. Use “Protect” on the Review tab.</div>
+    </div>
+  </div>
+</section>
+</main>
+
+<dialog id="dlg">
+  <h3 id="dlgT" style="color:var(--text);text-transform:none;letter-spacing:0;font-size:16px">Confirm</h3>
+  <p id="dlgB" class="muted"></p>
+  <div class="row" style="justify-content:flex-end;margin-top:18px">
+    <button class="btn" onclick="dlgDone(false)">Cancel</button>
+    <button class="btn danger" id="dlgOk" onclick="dlgDone(true)">Delete</button>
+  </div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtSize=n=>{n=+n||0;const u=["B","KB","MB","GB","TB"];let i=0;while(n>=1024&&i<4){n/=1024;i++}return (i?n.toFixed(1):n)+" "+u[i]};
+const fmtDate=s=>s?new Date(s).toLocaleString([], {dateStyle:"medium",timeStyle:"short"}):"–";
+const fmtDay=s=>s?new Date(s).toLocaleDateString([], {dateStyle:"medium"}):"never";
+const ago=s=>{if(!s)return"";const d=Math.round((Date.now()-new Date(s))/864e5);return d<=0?"today":d+"d ago"};
+
+let S={}, status={}, review={run:null,items:[],sort:"label",dir:1}, sel=new Set(), libsCache=null;
+
+async function api(path,opts={}){
+  const r=await fetch(path,{headers:{"Content-Type":"application/json"},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||(j.errors||[]).join("; ")||r.statusText);
+  return j;
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200)}
+let dlgRes;function confirmBox(title,body,ok="Delete"){$("#dlgT").textContent=title;$("#dlgB").innerHTML=body;$("#dlgOk").textContent=ok;$("#dlg").showModal();return new Promise(r=>dlgRes=r)}
+function dlgDone(v){$("#dlg").close();dlgRes&&dlgRes(v)}
+
+function tab(name){$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));$$("section").forEach(s=>s.classList.toggle("on",s.id===name));
+  if(name==="history")loadHistory(); if(name==="review"&&!review.run&&status.latest_finished)openRun(status.latest_finished); if(name==="settings")loadSettings();
+  try{localStorage.setItem("tab",name)}catch(e){}}
+$$("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+/* ---------------- dashboard */
+async function poll(){
+  try{status=await api("/api/status")}catch(e){return}
+  const running=status.running;
+  $("#pill").textContent=running?"Running…":"Idle";$("#pill").classList.toggle("run",running);
+  $("#bDry").disabled=$("#bLive").disabled=running;$("#bCancel").disabled=!running;
+  if(status.log.length||running){
+    const html=status.log.map(l=>{const c=l.includes("[STALE]")?"stale":l.includes("[DELETED]")?"del":/ERROR|\[FAIL\]/.test(l)?"err":"";return `<div class="${c}">${esc(l)}</div>`}).join("");
+    const el=$("#log");if(el._last!==html){el.innerHTML=html;el._last=html;if($("#follow").checked)el.scrollTop=el.scrollHeight}
+  }
+  $("#sNext").textContent=status.next_run?new Date(status.next_run).toLocaleString([], {weekday:"short",hour:"2-digit",minute:"2-digit"}):"Off";
+  $("#sNextS").textContent=status.next_run?fmtDate(status.next_run):"Enable in Settings";
+  const lr=status.last_run;
+  if(lr){$("#sLast").innerHTML=`<span class="badge b-${lr.status==="ok"?"ok":lr.status==="running"?"dry":"error"}">${esc(lr.status)}</span>`;
+    $("#sLastS").textContent=`#${lr.id} · ${lr.mode==="dry"?"dry run":"live"} · ${fmtDate(lr.started)}`;
+    if(lr.status!=="running"){$("#sStale").textContent=lr.candidates;$("#sStaleS").textContent=lr.mode==="live"?`${lr.deleted} deleted · ${fmtSize(lr.freed)} freed`:"from last scan"}}
+}
+const _poll=async()=>{const prev=window._wasRunning;await poll();window._wasRunning=status.running;if(prev&&!status.running){toast("Run finished");if(status.latest_finished)openRun(status.latest_finished,true)}};
+async function startRun(mode){try{const r=await api("/api/run",{method:"POST",body:{mode}});toast(`Run #${r.run_id} started`);window._wasRunning=true;$("#log").innerHTML="";_poll()}catch(e){toast(e.message)}}
+async function confirmLive(){if(await confirmBox("Run and delete now?",`Everything matching your rules will be <b>deleted from Emby and from disk</b> (max ${S.max_deletes||"unlimited"} items). Run a dry run first if you haven't.`,"Run & delete"))startRun("live")}
+async function cancelRun(){await api("/api/cancel",{method:"POST"});toast("Cancelling…")}
+
+function renderSummary(){
+  $("#setupBanner").style.display=(S.emby_url&&S.api_key)?"none":"block";
+  $("#sMode").textContent=S.dry_run?"Dry run":"Live";
+  $("#sModeS").textContent=S.dry_run?"Scheduled runs only report":"Scheduled runs delete";
+  const p=[];if(S.movies_enabled)p.push(`Movies ${S.movie_days||"∞"}d / ${S.movie_never_played_days||"∞"}d unwatched`);
+  if(S.tv_enabled)p.push(`TV ${S.tv_days||"∞"}d / ${S.tv_never_played_days||"∞"}d unwatched`);
+  $("#ruleSummary").textContent=p.join(" · ")||"All rules disabled";
+}
+
+/* ---------------- review */
+async function openRun(id,quiet){
+  try{const r=await api("/api/runs/"+id);review.run=r;review.items=r.items;sel.clear();renderReview()}catch(e){if(!quiet)toast(e.message)}
+  if(!quiet)tab("review");
+}
+function filtered(){
+  const q=$("#fText").value.toLowerCase(),t=$("#fType").value,a=$("#fAction").value;
+  return review.items.filter(i=>(!q||(i.label+" "+i.path+" "+i.library).toLowerCase().includes(q))&&(!t||i.type===t)&&
+    (!a||(a==="open"?i.action!=="deleted":(i.action||"").startsWith(a))))
+   .sort((x,y)=>{const k=review.sort;let A=x[k]??"",B=y[k]??"";if(typeof A==="number"||typeof B==="number"){A=+A||0;B=+B||0}else{A=String(A).toLowerCase();B=String(B).toLowerCase()}return (A>B?1:A<B?-1:0)*review.dir});
+}
+function badge(a){if(!a)return"";const c=a==="deleted"?"deleted":a.startsWith("failed")?"failed":a.startsWith("skipped")||a==="gone"?"skipped":a==="dry-run"?"dry":"";return `<span class="badge b-${c}">${esc(a)}</span>`}
+function renderReview(){
+  const r=review.run;if(!r)return;
+  $("#revTitle").textContent=`Scan #${r.id}`;
+  $("#revMeta").innerHTML=`${r.mode==="dry"?'<span class="badge b-dry">dry run</span>':'<span class="badge b-live">live</span>'} · ${fmtDate(r.started)} · ${r.items.length} stale · ${fmtSize(r.items.reduce((s,i)=>s+(+i.size||0),0))}`;
+  const rows=filtered();
+  $("#revEmpty").style.display=rows.length?"none":"block";
+  $("#revEmpty").textContent=r.items.length?"Nothing matches the filter.":"Nothing stale — your library is within the rules.";
+  $("#revBody").innerHTML=rows.map(i=>`<tr>
+    <td><input type="checkbox" class="sel" data-id="${esc(i.item_id)}" ${sel.has(i.item_id)?"checked":""} ${i.action==="deleted"?"disabled":""}></td>
+    <td class="t">${esc(i.label)}<div class="muted" style="font-weight:400;font-size:12px">${esc(i.reason)}</div><div class="p">${esc(i.path)}</div></td>
+    <td>${esc(i.type)}</td><td>${esc(i.library)}</td>
+    <td>${i.last_played?fmtDay(i.last_played)+`<div class="muted" style="font-size:12px">${ago(i.last_played)}${i.users?" · "+esc(i.users):""}</div>`:'<span class="muted">never</span>'}</td>
+    <td>${fmtDay(i.created)}<div class="muted" style="font-size:12px">${ago(i.created)}</div></td>
+    <td>${i.plays||0}</td><td style="white-space:nowrap">${fmtSize(i.size)}</td><td>${badge(i.action)}</td></tr>`).join("");
+  $$("#revBody .sel").forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.id):sel.delete(c.dataset.id);selInfo()});
+  $$("th[data-k]").forEach(th=>th.textContent=th.textContent.replace(/ [▲▼]$/,"")+(th.dataset.k===review.sort?(review.dir>0?" ▲":" ▼"):""));
+  selInfo();
+}
+function selInfo(){const items=review.items.filter(i=>sel.has(i.item_id));$("#selInfo").textContent=items.length?`${items.length} selected · ${fmtSize(items.reduce((s,i)=>s+(+i.size||0),0))}`:"";$("#selAll").checked=items.length&&items.length===filtered().filter(i=>i.action!=="deleted").length}
+$("#selAll").onchange=e=>{filtered().forEach(i=>{if(i.action==="deleted")return;e.target.checked?sel.add(i.item_id):sel.delete(i.item_id)});renderReview()};
+["#fText","#fType","#fAction"].forEach(s=>$(s).oninput=renderReview);
+$$("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;review.dir=review.sort===k?-review.dir:1;review.sort=k;renderReview()});
+
+async function deleteSel(){
+  const items=review.items.filter(i=>sel.has(i.item_id));if(!items.length)return toast("Select items first");
+  const list=items.slice(0,8).map(i=>"• "+esc(i.label)).join("<br>")+(items.length>8?`<br>…and ${items.length-8} more`:"");
+  if(!await confirmBox(`Delete ${items.length} item(s)?`,`${list}<br><br>Frees about <b>${fmtSize(items.reduce((s,i)=>s+(+i.size||0),0))}</b>. Files are removed from disk. Each item is re-checked first and skipped if someone watched it since the scan.`))return;
+  try{await api(`/api/runs/${review.run.id}/delete`,{method:"POST",body:{ids:[...sel]}});toast("Deleting…");sel.clear();window._wasRunning=true;
+    const w=setInterval(async()=>{await poll();if(!status.running){clearInterval(w);openRun(review.run.id,true)}},1200)}catch(e){toast(e.message)}
+}
+async function protectSel(series){
+  const items=review.items.filter(i=>sel.has(i.item_id));if(!items.length)return toast("Select items first");
+  const entries=[];items.forEach(i=>{if(series&&i.series_id)entries.push({id:i.series_id,label:i.label.split(" S")[0]+" (whole series)"});else entries.push({id:i.item_id,label:i.label})});
+  try{const r=await api("/api/protect",{method:"POST",body:{items:entries}});S.protected_items=r.protected_items;toast(`Protected ${entries.length} item(s) — they'll be skipped from now on`);sel.clear();renderReview()}catch(e){toast(e.message)}
+}
+
+/* ---------------- history */
+async function loadHistory(){
+  const runs=await api("/api/runs");$("#histEmpty").style.display=runs.length?"none":"block";
+  $("#histBody").innerHTML=runs.map(r=>`<tr><td>${r.id}</td><td>${fmtDate(r.started)}</td><td>${esc(r.trigger)}</td>
+    <td><span class="badge b-${r.mode==="dry"?"dry":"live"}">${r.mode==="dry"?"dry run":"live"}</span></td>
+    <td><span class="badge b-${r.status==="ok"?"ok":r.status==="running"?"dry":"error"}" title="${esc(r.error)}">${esc(r.status)}</span></td>
+    <td>${r.candidates}</td><td>${r.deleted}</td><td>${fmtSize(r.freed)}</td><td><a class="link" onclick="openRun(${r.id})">Open</a></td></tr>`).join("");
+}
+
+/* ---------------- settings */
+const F=["emby_url","api_key","movie_days","movie_never_played_days","tv_days","tv_never_played_days","keep_tag","max_deletes","schedule_cron","webhook_url"];
+const B=["movies_enabled","tv_enabled","dry_run","protect_favorites","schedule_enabled","notify_dry_runs"];
+async function loadSettings(){
+  S=await api("/api/settings");renderSummary();
+  F.forEach(k=>$("#"+k).value=S[k]??"");B.forEach(k=>$("#"+k).checked=!!S[k]);
+  $("#cronPreset").value=[...$("#cronPreset").options].some(o=>o.value===S.schedule_cron)?S.schedule_cron:"";
+  renderProtected();
+  if(S.emby_url&&S.api_key&&!libsCache){try{libsCache=await api("/api/libraries")}catch(e){}}
+  renderLibs();
+}
+function renderLibs(){
+  if(!libsCache)return;const ex=new Set(S.excluded_libraries||[]);
+  $("#libs").innerHTML=libsCache.length?libsCache.map(l=>`<label><input type="checkbox" data-lib="${esc(l.id)}" ${ex.has(l.id)?"":"checked"}> ${esc(l.name)} <span class="muted" style="font-size:12px">${esc(l.type||"mixed")}</span></label>`).join(""):'<span class="muted">No libraries found.</span>';
+}
+function renderProtected(){
+  const p=Object.entries(S.protected_items||{});
+  $("#protList").innerHTML=p.length?`<table><tbody>${p.map(([id,l])=>`<tr><td>${esc(l)}</td><td class="p">${esc(id)}</td><td style="text-align:right"><a class="link" onclick="unprotect('${esc(id)}')">Remove</a></td></tr>`).join("")}</tbody></table>`:"None. Use “Protect” on the Review tab, or tag items in Emby with your keep tag.";
+}
+async function unprotect(id){const r=await api("/api/protect/"+encodeURIComponent(id),{method:"DELETE"});S.protected_items=r.protected_items;renderProtected();toast("Removed")}
+function collect(){const b={};F.forEach(k=>b[k]=$("#"+k).value);B.forEach(k=>b[k]=$("#"+k).checked);
+  if(libsCache)b.excluded_libraries=$$("#libs input[data-lib]").filter(c=>!c.checked).map(c=>c.dataset.lib);return b}
+async function saveSettings(){
+  try{const r=await api("/api/settings",{method:"POST",body:collect()});S=r.settings;renderSummary();$("#setMsg").innerHTML=`<div class="banner ok">Saved.</div>`;toast("Settings saved");poll();setTimeout(()=>$("#setMsg").innerHTML="",3000)}
+  catch(e){$("#setMsg").innerHTML=`<div class="banner err">${esc(e.message)}</div>`}
+}
+async function testConn(){
+  $("#testRes").textContent="Testing…";
+  try{const r=await api("/api/test",{method:"POST",body:{emby_url:$("#emby_url").value,api_key:$("#api_key").value}});
+    $("#testRes").innerHTML=`<span style="color:var(--accent)">✓ ${esc(r.server)} v${esc(r.version)} · ${r.users} users · ${r.libraries.length} libraries</span>`;
+    libsCache=r.libraries;renderLibs()}
+  catch(e){$("#testRes").innerHTML=`<span style="color:var(--danger)">✗ ${esc(e.message)}</span>`}
+}
+
+/* ---------------- boot */
+(async()=>{
+  await loadSettings().catch(()=>{});await _poll();
+  setInterval(_poll,2000);
+  let t="dash";try{t=localStorage.getItem("tab")||"dash"}catch(e){}tab(t);
+})();
+</script>
+</body>
+</html>
