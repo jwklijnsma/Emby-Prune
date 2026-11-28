@@ -1,0 +1,83 @@
+# Emby Prune documentation - built with Zensical (https://zensical.org), same design as shift-mox
+#   pip install -r requirements-docs.txt
+#   zensical serve            # preview on http://localhost:8000
+#   zensical build --strict   # what CI runs
+
+[project]
+site_name = "Emby Prune"
+site_description = "Automatic clean-up of old movies and TV episodes on Emby, based on what any user watches - with a web GUI"
+site_url = "https://jwklijnsma.github.io/Emby-Prune/"
+repo_url = "https://github.com/jwklijnsma/Emby-Prune"
+repo_name = "jwklijnsma/Emby-Prune"
+edit_uri = "edit/main/docs/"
+copyright = "Emby Prune - deleting is permanent, start with dry runs"
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = [
+    { "Install" = "install.md" },
+    { "Pruning rules" = "rules.md" },
+  ] },
+  { "Configuration" = [
+    { "Environment variables" = "configuration.md" },
+  ] },
+  { "Usage" = [
+    { "Web GUI" = "gui.md" },
+    { "Run-once mode" = "run-once.md" },
+    { "API" = "api.md" },
+  ] },
+  { "Reference" = [
+    { "Safety notes" = "notes.md" },
+    { "Tests" = "tests.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.action.edit",
+  "content.code.annotate",
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.top",
+  "search.highlight",
+]
+
+[project.theme.icon]
+logo = "material/broom"
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "green"
+accent = "deep orange"
+toggle.icon = "material/weather-night"
+toggle.name = "Dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "green"
+accent = "deep orange"
+toggle.icon = "material/weather-sunny"
+toggle.name = "Light mode"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.details = {}
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.snippets = {}
+pymdownx.tabbed.alternate_style = true
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
